@@ -1,5 +1,6 @@
 import * as duckdb from '@duckdb/duckdb-wasm'
 import { createRequire } from 'node:module'
+import type { TransferListItem } from 'node:worker_threads'
 
 function getBrowserBundles(): duckdb.DuckDBBundles {
   const duckdbMvpWasm = new URL(
@@ -87,36 +88,31 @@ async function createNodeWorkerAdapter(workerCjsPath: string): Promise<Worker> {
       }
     },
     postMessage(msg: unknown, transfer?: Transferable[]): void {
-      nodeWorker.postMessage(msg, transfer as unknown as ArrayBuffer[])
+      nodeWorker.postMessage(msg, transfer as unknown as TransferListItem[])
     },
     terminate(): void {
       nodeWorker.terminate()
     },
   }
 
-  function dispatch(type: string, data: unknown): void {
-    const event = Object.assign(Object.create(null), {
-      type,
-      data,
-      target: adapter,
-      currentTarget: adapter,
-      timeStamp: Date.now(),
-    }) as MessageEvent
-    const bucket = listeners.get(type)
+  function dispatchEvent(event: MessageEvent | ErrorEvent): void {
+    const bucket = listeners.get(event.type)
     if (bucket) {
       for (const listener of [...bucket]) {
-        try {
-          listener(event)
-        } catch (err) {
-          console.error(err)
-        }
+        listener(event as MessageEvent)
       }
     }
   }
 
-  nodeWorker.on('message', (data) => dispatch('message', data))
-  nodeWorker.on('error', (err) => dispatch('error', err))
-  nodeWorker.on('exit', () => dispatch('close', null))
+  nodeWorker.on('message', (data) => {
+    dispatchEvent({ type: 'message', data, target: adapter, currentTarget: adapter, timeStamp: Date.now() } as MessageEvent)
+  })
+  nodeWorker.on('error', (err) => {
+    dispatchEvent({ type: 'error', error: err, message: err.message, target: adapter, currentTarget: adapter, timeStamp: Date.now() } as unknown as ErrorEvent)
+  })
+  nodeWorker.on('exit', () => {
+    dispatchEvent({ type: 'close', target: adapter, currentTarget: adapter, timeStamp: Date.now() } as unknown as MessageEvent)
+  })
 
   return adapter as unknown as Worker
 }
@@ -146,16 +142,21 @@ async function createDb(): Promise<duckdb.AsyncDuckDB> {
 
 let dbInstance: duckdb.AsyncDuckDB | null = null
 let connInstance: duckdb.AsyncDuckDBConnection | null = null
+let initPromise: Promise<duckdb.AsyncDuckDBConnection> | null = null
 
-export async function getDb(): Promise<duckdb.AsyncDuckDBConnection> {
-  if (connInstance) return connInstance
-
-  dbInstance = await createDb()
-  connInstance = await dbInstance.connect()
-  return connInstance
+export function getDb(): Promise<duckdb.AsyncDuckDBConnection> {
+  if (!initPromise) {
+    initPromise = (async () => {
+      dbInstance = await createDb()
+      connInstance = await dbInstance.connect()
+      return connInstance
+    })()
+  }
+  return initPromise
 }
 
 export async function resetDb(): Promise<void> {
+  initPromise = null
   if (connInstance) {
     await connInstance.close()
     connInstance = null
