@@ -46,11 +46,7 @@ export default defineConfig({
   },
   test: {
     environment: 'node',
-    include: ['src/**/*.test.ts'],
-    poolOptions: {
-      threads: {
-        singleThread: true,
-      },
-    },
+    include: ['src/**/*.test.{ts,tsx}'],
+    fileParallelism: false,
   },
 })
