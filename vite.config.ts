@@ -41,8 +41,16 @@ export default defineConfig({
     __APP_VERSION__: JSON.stringify(buildVersion),
   },
   plugins: [versionManifestPlugin(), tailwindcss(), react()],
+  optimizeDeps: {
+    exclude: ['@duckdb/duckdb-wasm'],
+  },
   test: {
     environment: 'node',
     include: ['src/**/*.test.ts'],
+    poolOptions: {
+      threads: {
+        singleThread: true,
+      },
+    },
   },
 })
