@@ -105,10 +105,11 @@ async function createNodeWorkerAdapter(workerCjsPath: string): Promise<Worker> {
   }
 
   nodeWorker.on('message', (data) => {
-    dispatchEvent({ type: 'message', data, target: adapter, currentTarget: adapter, timeStamp: Date.now() } as MessageEvent)
+    dispatchEvent({ type: 'message', data, target: adapter, currentTarget: adapter, timeStamp: Date.now() } as unknown as MessageEvent)
   })
   nodeWorker.on('error', (err) => {
-    dispatchEvent({ type: 'error', error: err, message: err.message, target: adapter, currentTarget: adapter, timeStamp: Date.now() } as unknown as ErrorEvent)
+    const errObj = err instanceof Error ? err : new Error(String(err))
+    dispatchEvent({ type: 'error', error: errObj, message: errObj.message, target: adapter, currentTarget: adapter, timeStamp: Date.now() } as unknown as ErrorEvent)
   })
   nodeWorker.on('exit', () => {
     dispatchEvent({ type: 'close', target: adapter, currentTarget: adapter, timeStamp: Date.now() } as unknown as MessageEvent)

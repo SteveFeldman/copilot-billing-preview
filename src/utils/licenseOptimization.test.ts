@@ -3,7 +3,6 @@ import {
   calculateScenarioCost,
   findOptimalMix,
   buildCostGrid,
-  type LicenseScenario,
 } from './licenseOptimization'
 
 // 1000 business users, each using 4 AIC units/month = 4000 total AIC units

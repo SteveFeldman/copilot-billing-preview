@@ -92,9 +92,11 @@ export class RowAppender {
       return
     }
 
-    const colData: Record<string, ReturnType<typeof vectorFromArray>['data'][0]> = {}
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const colData: Record<string, any> = {}
     for (const col of this._cols) {
-      let vec: ReturnType<typeof vectorFromArray>
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let vec: import('apache-arrow').Vector<any>
       switch (col.type) {
         case 'varchar':
           vec = vectorFromArray(col.values as (string | null)[], new Utf8())

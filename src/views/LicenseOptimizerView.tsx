@@ -34,13 +34,8 @@ export function LicenseOptimizerView({ totalAicUnits, currentBusinessSeats, curr
     [currentBusinessSeats, currentEnterpriseSeats, totalAicUnits],
   )
 
-  const allCosts = grid.flat().map((c) => c.totalCostUsd)
-  const minCost = Math.min(...allCosts)
-  const maxCost = Math.max(...allCosts)
-
   const displayCell = selectedCell ?? currentScenario
   const businessCols = Array.from({ length: bMax - bMin + 1 }, (_, i) => bMin + i)
-  const enterpriseRows = Array.from({ length: eMax - eMin + 1 }, (_, i) => eMin + i)
 
   return (
     <div className="p-6 space-y-6">
