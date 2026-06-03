@@ -15,19 +15,21 @@ export function LicenseOptimizerView({ totalAicUnits, currentBusinessSeats, curr
   const [selectedCell, setSelectedCell] = useState<LicenseScenario | null>(null)
   const [halfRange, setHalfRange] = useState(10)
 
-  const bMin = Math.max(0, currentBusinessSeats - halfRange)
-  const bMax = currentBusinessSeats + halfRange
-  const eMin = Math.max(0, currentEnterpriseSeats - halfRange)
-  const eMax = currentEnterpriseSeats + halfRange
+  const optimal = useMemo(
+    () => findOptimalMix({ totalAicUnits, minTotalSeats: userCount }),
+    [totalAicUnits, userCount],
+  )
+
+  // Grid is centered on the optimal mix so the most interesting area is always visible.
+  // The current config may appear with a blue ring if it falls within range.
+  const bMin = Math.max(0, optimal.businessSeats - halfRange)
+  const bMax = optimal.businessSeats + halfRange
+  const eMin = Math.max(0, optimal.enterpriseSeats - halfRange)
+  const eMax = optimal.enterpriseSeats + halfRange
 
   const grid = useMemo(
     () => buildCostGrid({ totalAicUnits, businessRange: [bMin, bMax], enterpriseRange: [eMin, eMax] }),
     [totalAicUnits, bMin, bMax, eMin, eMax],
-  )
-
-  const optimal = useMemo(
-    () => findOptimalMix({ totalAicUnits, minTotalSeats: userCount }),
-    [totalAicUnits, userCount],
   )
 
   const currentScenario = useMemo(
@@ -35,7 +37,12 @@ export function LicenseOptimizerView({ totalAicUnits, currentBusinessSeats, curr
     [currentBusinessSeats, currentEnterpriseSeats, totalAicUnits],
   )
 
-  const displayCell = selectedCell ?? currentScenario
+  const optimalScenario = useMemo(
+    () => calculateScenarioCost({ businessSeats: optimal.businessSeats, enterpriseSeats: optimal.enterpriseSeats, totalAicUnits }),
+    [optimal.businessSeats, optimal.enterpriseSeats, totalAicUnits],
+  )
+
+  const displayCell = selectedCell ?? optimalScenario
   const businessCols = Array.from({ length: bMax - bMin + 1 }, (_, i) => bMin + i)
 
   return (
@@ -77,12 +84,12 @@ export function LicenseOptimizerView({ totalAicUnits, currentBusinessSeats, curr
         <Stat label="AIC overage" value={formatUsd(displayCell.aicOverageUsd)} />
         <Stat label="Total/month" value={formatUsd(displayCell.totalCostUsd)} highlighted />
         <Stat
-          label="vs current"
-          value={displayCell === currentScenario
+          label="vs current config"
+          value={displayCell.businessSeats === currentBusinessSeats && displayCell.enterpriseSeats === currentEnterpriseSeats
             ? '—'
             : formatUsd(Math.abs(displayCell.totalCostUsd - currentScenario.totalCostUsd))
           }
-          note={displayCell !== currentScenario
+          note={!(displayCell.businessSeats === currentBusinessSeats && displayCell.enterpriseSeats === currentEnterpriseSeats)
             ? displayCell.totalCostUsd < currentScenario.totalCostUsd ? 'cheaper' : 'more expensive'
             : undefined
           }
