@@ -17,6 +17,9 @@ export function LicenseOptimizerView({ totalAicUnits, currentBusinessSeats, curr
   const [halfRange, setHalfRange] = useState(10)
   const [fixedTotalEnabled, setFixedTotalEnabled] = useState(false)
   const [fixedTotalInput, setFixedTotalInput] = useState<string>('')
+  const [showAnnual, setShowAnnual] = useState(false)
+  const multiplier = showAnnual ? 12 : 1
+  const periodLabel = showAnnual ? '/year' : '/month'
 
   const fixedTotal = fixedTotalEnabled
     ? (Number(fixedTotalInput) > 0 ? Math.floor(Number(fixedTotalInput)) : currentBusinessSeats + currentEnterpriseSeats)
@@ -100,6 +103,15 @@ export function LicenseOptimizerView({ totalAicUnits, currentBusinessSeats, curr
             Best split for {fixedTotal} seats: {fixedTotalScenario.businessSeats}B + {fixedTotalScenario.enterpriseSeats}E
           </span>
         )}
+        <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer select-none ml-auto">
+          <input
+            type="checkbox"
+            checked={showAnnual}
+            onChange={(e) => setShowAnnual(e.target.checked)}
+            className="rounded border-gray-300"
+          />
+          Show annual (×12)
+        </label>
       </div>
 
       {/* Optimal recommendation */}
@@ -107,13 +119,13 @@ export function LicenseOptimizerView({ totalAicUnits, currentBusinessSeats, curr
         <h2 className="text-sm font-semibold text-green-900 uppercase tracking-wide">Recommended mix</h2>
         <p className="mt-1 text-lg font-bold text-green-800">
           {optimal.businessSeats} Business + {optimal.enterpriseSeats} Enterprise
-          {' '}→ {formatUsd(optimal.totalCostUsd)}/month
+          {' '}→ {formatUsd(optimal.totalCostUsd * multiplier)}{periodLabel}
         </p>
         <p className="text-sm text-green-700">
-          License: {formatUsd(optimal.licenseCostUsd)} · AIC overage: {formatUsd(optimal.aicOverageUsd)}
+          License: {formatUsd(optimal.licenseCostUsd * multiplier)} · AIC overage: {formatUsd(optimal.aicOverageUsd * multiplier)}
           {optimal.totalCostUsd < currentScenario.totalCostUsd && (
             <span className="ml-2 font-medium">
-              (saves {formatUsd(currentScenario.totalCostUsd - optimal.totalCostUsd)}/month vs current)
+              (saves {formatUsd((currentScenario.totalCostUsd - optimal.totalCostUsd) * multiplier)}{periodLabel} vs current)
             </span>
           )}
         </p>
@@ -142,10 +154,10 @@ export function LicenseOptimizerView({ totalAicUnits, currentBusinessSeats, curr
           <div className="grid grid-cols-2 gap-3">
             <Stat label="Business seats" value={String(currentBusinessSeats)} />
             <Stat label="Enterprise seats" value={String(currentEnterpriseSeats)} />
-            <Stat label="License cost" value={formatUsd(currentScenario.licenseCostUsd)} />
+            <Stat label="License cost" value={formatUsd(currentScenario.licenseCostUsd * multiplier)} />
             <Stat label="AIC pool" value={currentScenario.poolSizeUnits.toLocaleString() + ' units'} />
-            <Stat label="AIC overage" value={formatUsd(currentScenario.aicOverageUsd)} />
-            <Stat label="Total/month" value={formatUsd(currentScenario.totalCostUsd)} highlighted />
+            <Stat label="AIC overage" value={formatUsd(currentScenario.aicOverageUsd * multiplier)} />
+            <Stat label={`Total${periodLabel}`} value={formatUsd(currentScenario.totalCostUsd * multiplier)} highlighted />
           </div>
         </div>
         <div className="rounded-lg border border-gray-200 bg-white p-4">
@@ -155,17 +167,17 @@ export function LicenseOptimizerView({ totalAicUnits, currentBusinessSeats, curr
           <div className="grid grid-cols-2 gap-3">
             <Stat label="Business seats" value={String(displayCell.businessSeats)} />
             <Stat label="Enterprise seats" value={String(displayCell.enterpriseSeats)} />
-            <Stat label="License cost" value={formatUsd(displayCell.licenseCostUsd)} />
+            <Stat label="License cost" value={formatUsd(displayCell.licenseCostUsd * multiplier)} />
             <Stat label="AIC pool" value={displayCell.poolSizeUnits.toLocaleString() + ' units'} />
-            <Stat label="AIC overage" value={formatUsd(displayCell.aicOverageUsd)} />
+            <Stat label="AIC overage" value={formatUsd(displayCell.aicOverageUsd * multiplier)} />
             <Stat
-              label="Total/month"
-              value={formatUsd(displayCell.totalCostUsd)}
+              label={`Total${periodLabel}`}
+              value={formatUsd(displayCell.totalCostUsd * multiplier)}
               highlighted
               note={displayCell.totalCostUsd < currentScenario.totalCostUsd
-                ? `saves ${formatUsd(currentScenario.totalCostUsd - displayCell.totalCostUsd)}/mo`
+                ? `saves ${formatUsd((currentScenario.totalCostUsd - displayCell.totalCostUsd) * multiplier)}${periodLabel}`
                 : displayCell.totalCostUsd > currentScenario.totalCostUsd
-                  ? `+${formatUsd(displayCell.totalCostUsd - currentScenario.totalCostUsd)}/mo`
+                  ? `+${formatUsd((displayCell.totalCostUsd - currentScenario.totalCostUsd) * multiplier)}${periodLabel}`
                   : undefined
               }
             />
@@ -177,7 +189,7 @@ export function LicenseOptimizerView({ totalAicUnits, currentBusinessSeats, curr
       <div>
         <div className="flex items-center justify-between mb-2">
           <h2 className="text-sm font-semibold text-gray-700">
-            Cost grid — click any cell to inspect. Green = cheaper than current, red = more expensive.
+            Cost grid ({showAnnual ? 'annual' : 'monthly'}) — click any cell to inspect. Green = cheaper than current, red = more expensive.
           </h2>
           <label className="flex items-center gap-1.5 text-xs text-gray-500">
             Range ±
@@ -240,9 +252,9 @@ export function LicenseOptimizerView({ totalAicUnits, currentBusinessSeats, curr
                             isSelected ? 'ring-2 ring-indigo-400 ring-inset' : '',
                             'hover:bg-indigo-50',
                           ].join(' ')}
-                          title={`${b} Business + ${e} Enterprise: ${formatUsd(cell.totalCostUsd)}/month`}
+                          title={`${b} Business + ${e} Enterprise: ${formatUsd(cell.totalCostUsd * multiplier)}${periodLabel}`}
                         >
-                          {formatUsd(cell.totalCostUsd)}
+                          {formatUsd(cell.totalCostUsd * multiplier)}
                         </td>
                       )
                     })}
