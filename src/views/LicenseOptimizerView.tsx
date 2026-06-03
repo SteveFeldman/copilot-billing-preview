@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { buildCostGrid, calculateScenarioCost, findOptimalMix, findOptimalSplitForFixedTotal, type LicenseScenario } from '../utils/licenseOptimization'
+import { buildCostGrid, calculateScenarioCost, calculateBreakEven, findOptimalMix, findOptimalSplitForFixedTotal, type LicenseScenario } from '../utils/licenseOptimization'
 import { formatUsd } from '../utils/format'
 
 type Props = {
@@ -20,6 +20,8 @@ export function LicenseOptimizerView({ totalAicUnits, currentBusinessSeats, curr
   const [showAnnual, setShowAnnual] = useState(false)
   const multiplier = showAnnual ? 12 : 1
   const periodLabel = showAnnual ? '/year' : '/month'
+
+  const breakEven = useMemo(() => calculateBreakEven(), [])
 
   const fixedTotal = fixedTotalEnabled
     ? (Number(fixedTotalInput) > 0 ? Math.floor(Number(fixedTotalInput)) : currentBusinessSeats + currentEnterpriseSeats)
@@ -146,6 +148,25 @@ export function LicenseOptimizerView({ totalAicUnits, currentBusinessSeats, curr
           </p>
         </div>
       )}
+
+      {/* Break-even guide */}
+      <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+        <h2 className="text-sm font-semibold text-gray-700 mb-2">When does each seat type pay off?</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm text-gray-600">
+          <div>
+            <p className="font-medium text-gray-800">Business ($19/seat)</p>
+            <p>Saves money vs pure overage when a seat's AIC usage exceeds <span className="font-semibold">{breakEven.businessBreakEvenUnits.toLocaleString()} units/month</span>.</p>
+          </div>
+          <div>
+            <p className="font-medium text-gray-800">Enterprise ($39/seat)</p>
+            <p>Saves money vs pure overage when a seat's AIC usage exceeds <span className="font-semibold">{breakEven.enterpriseBreakEvenUnits.toLocaleString()} units/month</span>.</p>
+          </div>
+          <div>
+            <p className="font-medium text-gray-800">Enterprise vs Business</p>
+            <p>Prefer Enterprise over Business when a seat needs more than <span className="font-semibold">{breakEven.enterpriseVsBusinessBreakEvenUnits.toLocaleString()} additional units/month</span> beyond Business's pool.</p>
+          </div>
+        </div>
+      </div>
 
       {/* Side-by-side breakdown: current config vs selected/recommended */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
