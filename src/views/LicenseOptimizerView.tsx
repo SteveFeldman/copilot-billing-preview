@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { buildCostGrid, calculateScenarioCost, findOptimalMix, type LicenseScenario } from '../utils/licenseOptimization'
+import { buildCostGrid, calculateScenarioCost, findOptimalMix, findOptimalSplitForFixedTotal, type LicenseScenario } from '../utils/licenseOptimization'
 import { formatUsd } from '../utils/format'
 
 type Props = {
@@ -15,6 +15,12 @@ const RANGE_OPTIONS = [10, 25, 50, 100] as const
 export function LicenseOptimizerView({ totalAicUnits, currentBusinessSeats, currentEnterpriseSeats, userCount, zeroAicUserCount }: Props) {
   const [selectedCell, setSelectedCell] = useState<LicenseScenario | null>(null)
   const [halfRange, setHalfRange] = useState(10)
+  const [fixedTotalEnabled, setFixedTotalEnabled] = useState(false)
+  const [fixedTotalInput, setFixedTotalInput] = useState<string>('')
+
+  const fixedTotal = fixedTotalEnabled
+    ? (Number(fixedTotalInput) > 0 ? Number(fixedTotalInput) : currentBusinessSeats + currentEnterpriseSeats)
+    : null
 
   const minTotalSeats = Math.max(userCount, currentBusinessSeats + currentEnterpriseSeats)
 
@@ -45,7 +51,14 @@ export function LicenseOptimizerView({ totalAicUnits, currentBusinessSeats, curr
     [optimal.businessSeats, optimal.enterpriseSeats, totalAicUnits],
   )
 
-  const displayCell = selectedCell ?? optimalScenario
+  const fixedTotalScenario = useMemo(
+    () => fixedTotal !== null
+      ? findOptimalSplitForFixedTotal({ totalAicUnits, totalSeats: fixedTotal })
+      : null,
+    [totalAicUnits, fixedTotal],
+  )
+
+  const displayCell = selectedCell ?? fixedTotalScenario ?? optimalScenario
   const businessCols = Array.from({ length: bMax - bMin + 1 }, (_, i) => bMin + i)
 
   return (
@@ -55,6 +68,38 @@ export function LicenseOptimizerView({ totalAicUnits, currentBusinessSeats, curr
         <p className="mt-1 text-sm text-gray-500">
           Find the Business/Enterprise seat mix that minimizes your monthly spend (license fees + AIC overage) for this report's usage.
         </p>
+      </div>
+
+      {/* Controls: fixed total toggle + range selector */}
+      <div className="flex items-center gap-3 flex-wrap">
+        <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={fixedTotalEnabled}
+            onChange={(e) => {
+              setFixedTotalEnabled(e.target.checked)
+              setSelectedCell(null)
+              if (!e.target.checked) setFixedTotalInput('')
+            }}
+            className="rounded border-gray-300"
+          />
+          Fix total seats
+        </label>
+        {fixedTotalEnabled && (
+          <input
+            type="number"
+            min={0}
+            value={fixedTotalInput === '' ? (currentBusinessSeats + currentEnterpriseSeats) : fixedTotalInput}
+            onChange={(e) => { setSelectedCell(null); setFixedTotalInput(e.target.value) }}
+            className="border border-gray-300 rounded px-2 py-1 text-sm w-24 bg-white"
+            aria-label="Total seats"
+          />
+        )}
+        {fixedTotalEnabled && fixedTotalScenario && (
+          <span className="text-sm text-gray-500">
+            Best split for {fixedTotal} seats: {fixedTotalScenario.businessSeats}B + {fixedTotalScenario.enterpriseSeats}E
+          </span>
+        )}
       </div>
 
       {/* Optimal recommendation */}
@@ -105,7 +150,7 @@ export function LicenseOptimizerView({ totalAicUnits, currentBusinessSeats, curr
         </div>
         <div className="rounded-lg border border-gray-200 bg-white p-4">
           <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
-            {selectedCell ? 'Selected' : 'Recommended'}
+            {selectedCell ? 'Selected' : fixedTotalEnabled ? 'Fixed Total' : 'Recommended'}
           </p>
           <div className="grid grid-cols-2 gap-3">
             <Stat label="Business seats" value={String(displayCell.businessSeats)} />
@@ -172,6 +217,7 @@ export function LicenseOptimizerView({ totalAicUnits, currentBusinessSeats, curr
                       const b = bMin + bIdx
                       const isCurrent = b === currentBusinessSeats && e === currentEnterpriseSeats
                       const isSelected = selectedCell?.businessSeats === b && selectedCell?.enterpriseSeats === e
+                      const isFixedTotalMismatch = fixedTotal !== null && (b + e) !== fixedTotal
 
                       let colorClass = 'bg-white'
                       if (cell.isOptimal) {
@@ -189,6 +235,7 @@ export function LicenseOptimizerView({ totalAicUnits, currentBusinessSeats, curr
                           className={[
                             'px-2 py-1 text-center cursor-pointer border border-gray-100 transition-colors',
                             colorClass,
+                            isFixedTotalMismatch ? 'opacity-30' : '',
                             isCurrent ? 'ring-2 ring-blue-500 ring-inset font-bold' : '',
                             isSelected ? 'ring-2 ring-indigo-400 ring-inset' : '',
                             'hover:bg-indigo-50',
@@ -206,7 +253,10 @@ export function LicenseOptimizerView({ totalAicUnits, currentBusinessSeats, curr
           </table>
         </div>
         <p className="mt-1 text-xs text-gray-400">
-          Blue ring = current configuration. Bold green = optimal. Grid centered ±{halfRange} seats from current.
+          Blue ring = current configuration. Bold green = optimal.
+          {fixedTotal !== null
+            ? ` Dimmed cells don't sum to ${fixedTotal} total seats.`
+            : ` Grid centered ±${halfRange} seats from optimal.`}
         </p>
       </div>
     </div>
