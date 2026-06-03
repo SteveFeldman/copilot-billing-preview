@@ -9,15 +9,16 @@ type Props = {
   userCount: number
 }
 
-const GRID_HALF_RANGE = 10
+const RANGE_OPTIONS = [10, 25, 50, 100] as const
 
 export function LicenseOptimizerView({ totalAicUnits, currentBusinessSeats, currentEnterpriseSeats, userCount }: Props) {
   const [selectedCell, setSelectedCell] = useState<LicenseScenario | null>(null)
+  const [halfRange, setHalfRange] = useState(10)
 
-  const bMin = Math.max(0, currentBusinessSeats - GRID_HALF_RANGE)
-  const bMax = currentBusinessSeats + GRID_HALF_RANGE
-  const eMin = Math.max(0, currentEnterpriseSeats - GRID_HALF_RANGE)
-  const eMax = currentEnterpriseSeats + GRID_HALF_RANGE
+  const bMin = Math.max(0, currentBusinessSeats - halfRange)
+  const bMax = currentBusinessSeats + halfRange
+  const eMin = Math.max(0, currentEnterpriseSeats - halfRange)
+  const eMax = currentEnterpriseSeats + halfRange
 
   const grid = useMemo(
     () => buildCostGrid({ totalAicUnits, businessRange: [bMin, bMax], enterpriseRange: [eMin, eMax] }),
@@ -90,9 +91,22 @@ export function LicenseOptimizerView({ totalAicUnits, currentBusinessSeats, curr
 
       {/* Cost grid */}
       <div>
-        <h2 className="text-sm font-semibold text-gray-700 mb-2">
-          Cost grid — click any cell to inspect. Green = cheaper than current, red = more expensive.
-        </h2>
+        <div className="flex items-center justify-between mb-2">
+          <h2 className="text-sm font-semibold text-gray-700">
+            Cost grid — click any cell to inspect. Green = cheaper than current, red = more expensive.
+          </h2>
+          <label className="flex items-center gap-1.5 text-xs text-gray-500">
+            Range ±
+            <select
+              value={halfRange}
+              onChange={(e) => { setSelectedCell(null); setHalfRange(Number(e.target.value)) }}
+              className="border border-gray-300 rounded px-1 py-0.5 text-xs bg-white"
+            >
+              {RANGE_OPTIONS.map((r) => <option key={r} value={r}>{r}</option>)}
+            </select>
+            seats
+          </label>
+        </div>
         <div className="overflow-auto border border-gray-200 rounded-lg">
           <table className="text-xs border-collapse min-w-max">
             <thead>
@@ -153,7 +167,7 @@ export function LicenseOptimizerView({ totalAicUnits, currentBusinessSeats, curr
           </table>
         </div>
         <p className="mt-1 text-xs text-gray-400">
-          Blue ring = current configuration. Bold green = optimal. Grid centered ±{GRID_HALF_RANGE} seats from current.
+          Blue ring = current configuration. Bold green = optimal. Grid centered ±{halfRange} seats from current.
         </p>
       </div>
     </div>
