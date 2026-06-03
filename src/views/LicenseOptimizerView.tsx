@@ -74,26 +74,42 @@ export function LicenseOptimizerView({ totalAicUnits, currentBusinessSeats, curr
         </p>
       </div>
 
-      {/* Selected/current combination breakdown */}
-      <div className="rounded-lg border border-gray-200 bg-white p-4 grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <Stat label="Business seats" value={String(displayCell.businessSeats)} />
-        <Stat label="Enterprise seats" value={String(displayCell.enterpriseSeats)} />
-        <Stat label="License cost" value={formatUsd(displayCell.licenseCostUsd)} />
-        <Stat label="AIC pool" value={displayCell.poolSizeUnits.toLocaleString() + ' units'} />
-        <Stat label="AIC usage" value={totalAicUnits.toLocaleString() + ' units'} />
-        <Stat label="AIC overage" value={formatUsd(displayCell.aicOverageUsd)} />
-        <Stat label="Total/month" value={formatUsd(displayCell.totalCostUsd)} highlighted />
-        <Stat
-          label="vs current config"
-          value={displayCell.businessSeats === currentBusinessSeats && displayCell.enterpriseSeats === currentEnterpriseSeats
-            ? '—'
-            : formatUsd(Math.abs(displayCell.totalCostUsd - currentScenario.totalCostUsd))
-          }
-          note={!(displayCell.businessSeats === currentBusinessSeats && displayCell.enterpriseSeats === currentEnterpriseSeats)
-            ? displayCell.totalCostUsd < currentScenario.totalCostUsd ? 'cheaper' : 'more expensive'
-            : undefined
-          }
-        />
+      {/* Side-by-side breakdown: current config vs selected/recommended */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Current config</p>
+          <div className="grid grid-cols-2 gap-3">
+            <Stat label="Business seats" value={String(currentBusinessSeats)} />
+            <Stat label="Enterprise seats" value={String(currentEnterpriseSeats)} />
+            <Stat label="License cost" value={formatUsd(currentScenario.licenseCostUsd)} />
+            <Stat label="AIC pool" value={currentScenario.poolSizeUnits.toLocaleString() + ' units'} />
+            <Stat label="AIC overage" value={formatUsd(currentScenario.aicOverageUsd)} />
+            <Stat label="Total/month" value={formatUsd(currentScenario.totalCostUsd)} highlighted />
+          </div>
+        </div>
+        <div className="rounded-lg border border-gray-200 bg-white p-4">
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
+            {selectedCell ? 'Selected' : 'Recommended'}
+          </p>
+          <div className="grid grid-cols-2 gap-3">
+            <Stat label="Business seats" value={String(displayCell.businessSeats)} />
+            <Stat label="Enterprise seats" value={String(displayCell.enterpriseSeats)} />
+            <Stat label="License cost" value={formatUsd(displayCell.licenseCostUsd)} />
+            <Stat label="AIC pool" value={displayCell.poolSizeUnits.toLocaleString() + ' units'} />
+            <Stat label="AIC overage" value={formatUsd(displayCell.aicOverageUsd)} />
+            <Stat
+              label="Total/month"
+              value={formatUsd(displayCell.totalCostUsd)}
+              highlighted
+              note={displayCell.totalCostUsd < currentScenario.totalCostUsd
+                ? `saves ${formatUsd(currentScenario.totalCostUsd - displayCell.totalCostUsd)}/mo`
+                : displayCell.totalCostUsd > currentScenario.totalCostUsd
+                  ? `+${formatUsd(displayCell.totalCostUsd - currentScenario.totalCostUsd)}/mo`
+                  : undefined
+              }
+            />
+          </div>
+        </div>
       </div>
 
       {/* Cost grid */}
