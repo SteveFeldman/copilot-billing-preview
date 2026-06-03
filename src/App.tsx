@@ -17,14 +17,14 @@ import { OverviewView } from './views/OverviewView'
 import { CostManagementView } from './views/CostManagementView'
 import { SpendInsightsView } from './views/SpendInsightsView'
 import { appLinks } from './config/links'
-import { QuickStatsAggregator, type QuickStatsResult } from './pipeline/aggregators/quickStatsAggregator'
-import { ReportContextAggregator, type ReportContextResult } from './pipeline/aggregators/reportContextAggregator'
-import { DailyUsageAggregator, type DailyUsageData } from './pipeline/aggregators/dailyUsageAggregator'
-import { ModelUsageAggregator, type ModelUsageResult } from './pipeline/aggregators/modelUsageAggregator'
-import { ProductUsageAggregator, type ProductUsageResult } from './pipeline/aggregators/productUsageAggregator'
-import { CostCenterAggregator, type CostCenterResult } from './pipeline/aggregators/costCenterAggregator'
-import { OrganizationAggregator, type OrganizationResult } from './pipeline/aggregators/organizationAggregator'
-import { UserUsageAggregator, type UserUsageResult } from './pipeline/aggregators/userUsageAggregator'
+import type { QuickStatsResult } from './pipeline/aggregators/quickStatsAggregator'
+import type { ReportContextResult } from './pipeline/aggregators/reportContextAggregator'
+import type { DailyUsageData } from './pipeline/aggregators/dailyUsageAggregator'
+import type { ModelUsageResult } from './pipeline/aggregators/modelUsageAggregator'
+import type { ProductUsageResult } from './pipeline/aggregators/productUsageAggregator'
+import type { CostCenterResult } from './pipeline/aggregators/costCenterAggregator'
+import type { OrganizationResult } from './pipeline/aggregators/organizationAggregator'
+import type { UserUsageResult } from './pipeline/aggregators/userUsageAggregator'
 import {
   BUSINESS_MONTHLY_AIC_INCLUDED_CREDITS,
   ENTERPRISE_MONTHLY_AIC_INCLUDED_CREDITS,
@@ -33,7 +33,7 @@ import {
   type AicIncludedCreditsOverrides,
 } from './pipeline/aicIncludedCredits'
 import { PRODUCT_BUDGET_COPILOT, PRODUCT_BUDGET_COPILOT_CLOUD_AGENT, PRODUCT_BUDGET_SPARK } from './pipeline/productClassification'
-import { runPipeline } from './pipeline/runPipeline'
+import { runPipelineDuckDB } from './pipeline/runPipelineDuckDB'
 import { runBudgetSimulation, type BudgetSimulationResult } from './utils/budgetSimulation'
 import { EMPTY_BUDGET_VALUES, getDefaultBudgetValues, getUserSpendSegmentsByUsername, type BudgetField, type BudgetValues } from './utils/costManagementBudgets'
 import { calculateIndividualPlanUpgradeRecommendation, getIndividualLicenseMonthlyCost } from './utils/individualPlanUpgrade'
@@ -111,42 +111,22 @@ function App() {
     includedCreditsOverrides: AicIncludedCreditsOverrides = {},
     onProgress?: (progressInfo: { rowsProcessed: number; progressPercent: number }) => void,
   ) => {
-    const statsAggregator = new QuickStatsAggregator()
-    const contextAggregator = new ReportContextAggregator()
-    const dailyAggregator = new DailyUsageAggregator()
-    const modelAggregator = new ModelUsageAggregator()
-    const productAggregator = new ProductUsageAggregator()
-    const costCenterAggregator = new CostCenterAggregator()
-    const orgAggregator = new OrganizationAggregator()
-    const userAggregator = new UserUsageAggregator()
-
-    const pipelineResult = await runPipeline(file, [
-      statsAggregator,
-      contextAggregator,
-      dailyAggregator,
-      modelAggregator,
-      productAggregator,
-      costCenterAggregator,
-      orgAggregator,
-      userAggregator,
-    ], {
+    const result = await runPipelineDuckDB(file, {
       includedCreditsOverrides,
-      progressResolution: 500,
-      onProgress,
+      onProgress: onProgress
+        ? (progress) => onProgress({ rowsProcessed: progress.rowsProcessed, progressPercent: progress.progressPercent })
+        : undefined,
     })
 
     return {
-      quickStats: {
-        ...statsAggregator.result(),
-        lineCount: pipelineResult.reportRowCount,
-      },
-      reportContext: contextAggregator.result(),
-      dailyUsageData: dailyAggregator.result().dailyData,
-      modelUsage: modelAggregator.result(),
-      productUsage: productAggregator.result(),
-      costCenters: costCenterAggregator.result(),
-      orgs: orgAggregator.result(),
-      userUsage: userAggregator.result(),
+      quickStats: { ...result.quickStats, lineCount: result.reportRowCount },
+      reportContext: result.reportContext,
+      dailyUsageData: result.dailyUsage.dailyData,
+      modelUsage: result.modelUsage,
+      productUsage: result.productUsage,
+      costCenters: result.costCenters,
+      orgs: result.organizations,
+      userUsage: result.userUsage,
     }
   }, [])
 
