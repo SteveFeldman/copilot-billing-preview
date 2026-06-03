@@ -1,5 +1,4 @@
 import * as duckdb from '@duckdb/duckdb-wasm'
-import { createRequire } from 'node:module'
 import type { TransferListItem } from 'node:worker_threads'
 
 function getBrowserBundles(): duckdb.DuckDBBundles {
@@ -26,15 +25,12 @@ function getBrowserBundles(): duckdb.DuckDBBundles {
   }
 }
 
-function getNodeBundle(): { mainModule: string; mainWorker: string } {
+async function getNodeBundle(): Promise<{ mainModule: string; mainWorker: string }> {
+  const { createRequire } = await import('node:module')
   const require = createRequire(import.meta.url)
   return {
-    // The EH wasm file (same one used by both browser and node EH bundles)
     mainModule: require.resolve('@duckdb/duckdb-wasm/dist/duckdb-eh.wasm'),
-    // The node EH worker CJS (loaded via the node bundle's internal shim)
-    mainWorker: require.resolve(
-      '@duckdb/duckdb-wasm/dist/duckdb-node-eh.worker.cjs',
-    ),
+    mainWorker: require.resolve('@duckdb/duckdb-wasm/dist/duckdb-node-eh.worker.cjs'),
   }
 }
 
@@ -52,6 +48,7 @@ function getNodeBundle(): { mainModule: string; mainWorker: string } {
  */
 async function createNodeWorkerAdapter(workerCjsPath: string): Promise<Worker> {
   const { Worker: NodeWorker } = await import('node:worker_threads')
+  const { createRequire } = await import('node:module')
   const require = createRequire(import.meta.url)
 
   // duckdb-node.cjs serves as both the main-thread library and worker entrypoint.
@@ -126,7 +123,7 @@ async function createDb(): Promise<duckdb.AsyncDuckDB> {
   let mainModule: string
 
   if (isNode) {
-    const bundle = getNodeBundle()
+    const bundle = await getNodeBundle()
     worker = await createNodeWorkerAdapter(bundle.mainWorker)
     mainModule = bundle.mainModule
   } else {
