@@ -5,12 +5,11 @@ import type { ReportContextResult } from '../../pipeline/aggregators/reportConte
 export async function queryQuickStats(conn: duckdb.AsyncDuckDBConnection): Promise<QuickStatsResult> {
   const result = await conn.query(`
     SELECT
-      COUNT(*)                                      AS lineCount,
-      COUNT(DISTINCT username)                      AS userCount,
-      COUNT(DISTINCT organization)                  AS orgCount,
+      COUNT(*)                                                                           AS lineCount,
+      COUNT(DISTINCT CASE WHEN username != '' THEN username END)                        AS userCount,
+      COUNT(DISTINCT CASE WHEN organization != '' THEN organization END)                AS orgCount,
       COUNT(DISTINCT CASE WHEN cost_center_name IS NOT NULL THEN cost_center_name END) AS costCenterCount
     FROM usage
-    WHERE username IS NOT NULL AND username != ''
   `)
   const row = result.toArray()[0].toJSON()
   return {
