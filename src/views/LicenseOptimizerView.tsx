@@ -19,7 +19,7 @@ export function LicenseOptimizerView({ totalAicUnits, currentBusinessSeats, curr
   const [fixedTotalInput, setFixedTotalInput] = useState<string>('')
 
   const fixedTotal = fixedTotalEnabled
-    ? (Number(fixedTotalInput) > 0 ? Number(fixedTotalInput) : currentBusinessSeats + currentEnterpriseSeats)
+    ? (Number(fixedTotalInput) > 0 ? Math.floor(Number(fixedTotalInput)) : currentBusinessSeats + currentEnterpriseSeats)
     : null
 
   const minTotalSeats = Math.max(userCount, currentBusinessSeats + currentEnterpriseSeats)
