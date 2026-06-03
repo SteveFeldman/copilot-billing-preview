@@ -105,6 +105,10 @@ export class RowAppender {
         case 'bool':
           vec = vectorFromArray(col.values as (boolean | null)[], new Bool())
           break
+        default: {
+          const _exhaustive: never = col.type
+          throw new Error(`RowAppender: unhandled column type: ${_exhaustive}`)
+        }
       }
       colData[col.name] = vec.data[0]
     }
@@ -126,7 +130,7 @@ export class RowAppender {
   }
 
   async close(): Promise<void> {
-    // Connection lifecycle is managed externally
+    await this.flush()
   }
 }
 

@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@duckdb/duckdb-wasm": "^1.33.1-dev45.0",
+    "apache-arrow": "^17.0.0",
     "@primer/octicons-react": "^19.26.0",
     "@primer/primitives": "^11.9.0",
     "chart.js": "^4.5.1",
