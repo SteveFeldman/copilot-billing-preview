@@ -5,23 +5,7 @@ import type {
   CostTotals,
   CostCenterUserTotals,
 } from '../../pipeline/aggregators/costCenterAggregator'
-import { METRICS_SELECT } from './metrics'
-
-// 6-field user-breakdown fragment (no discountAmount)
-const USER_METRICS_SELECT = `
-  SUM(CASE WHEN unit_type = 'requests' THEN quantity       ELSE 0 END)           AS requests,
-  SUM(CASE WHEN unit_type = 'requests' THEN gross_amount   ELSE 0 END)           AS grossAmount,
-  SUM(CASE WHEN unit_type = 'requests' THEN net_amount     ELSE 0 END)           AS netAmount,
-  SUM(CASE
-    WHEN unit_type = 'requests' THEN aic_quantity
-    ELSE CASE WHEN has_aic_quantity THEN aic_quantity ELSE quantity END
-  END)                                                                            AS aicQuantity,
-  SUM(CASE
-    WHEN unit_type = 'requests' THEN aic_gross_amount
-    ELSE CASE WHEN has_aic_gross_amount THEN aic_gross_amount ELSE gross_amount END
-  END)                                                                            AS aicGrossAmount,
-  SUM(aic_net_amount)                                                             AS aicNetAmount
-`.trim()
+import { METRICS_SELECT, USER_METRICS_SELECT } from './metrics'
 
 function rowToTotals(r: Record<string, unknown>): CostTotals {
   return {
@@ -46,7 +30,7 @@ function rowToUserTotals(r: Record<string, unknown>): CostCenterUserTotals {
   }
 }
 
-export async function queryCostCenterUsage(
+export async function queryCostCenters(
   conn: duckdb.AsyncDuckDBConnection,
 ): Promise<CostCenterResult> {
   // Query 1: per cost-center totals + user count

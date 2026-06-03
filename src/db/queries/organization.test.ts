@@ -1,7 +1,7 @@
 import { describe, it, expect, afterEach } from 'vitest'
 import { getDb, resetDb } from '../duckdb'
 import { createUsageTable, appendRow } from '../appender'
-import { queryOrganizationUsage } from './organization'
+import { queryOrganizations } from './organization'
 import type { TokenUsageRecord } from '../../pipeline/parser'
 
 function makeRecord(overrides: Partial<TokenUsageRecord> = {}): TokenUsageRecord {
@@ -28,7 +28,7 @@ async function seedTable(records: TokenUsageRecord[]) {
   return conn
 }
 
-describe('queryOrganizationUsage', () => {
+describe('queryOrganizations', () => {
   afterEach(async () => { await resetDb() })
 
   it('groups by organization and counts distinct users', async () => {
@@ -39,7 +39,7 @@ describe('queryOrganizationUsage', () => {
       makeRecord({ username: 'octocat', organization: 'github' }),
     ])
     const conn = await getDb()
-    const result = await queryOrganizationUsage(conn)
+    const result = await queryOrganizations(conn)
 
     expect(result.organizations).toHaveLength(2)
     const octo = result.organizations.find((o) => o.organization === 'octo')
@@ -57,7 +57,7 @@ describe('queryOrganizationUsage', () => {
       makeRecord({ organization: 'octo', quantity: 3, gross_amount: 0.12, discount_amount: 0.03, net_amount: 0.09, aic_quantity: 3, aic_gross_amount: 0.03, aic_net_amount: 0.03 }),
     ])
     const conn = await getDb()
-    const result = await queryOrganizationUsage(conn)
+    const result = await queryOrganizations(conn)
 
     const octo = result.organizations.find((o) => o.organization === 'octo')
     expect(octo!.totals.requests).toBeCloseTo(5)
@@ -75,7 +75,7 @@ describe('queryOrganizationUsage', () => {
       makeRecord({ username: 'mona', organization: 'octo', model: 'Claude 3.5', quantity: 1, gross_amount: 0.04, discount_amount: 0.01, net_amount: 0.03 }),
     ])
     const conn = await getDb()
-    const result = await queryOrganizationUsage(conn)
+    const result = await queryOrganizations(conn)
 
     const octo = result.organizations.find((o) => o.organization === 'octo')
     expect(octo).toBeDefined()
@@ -93,7 +93,7 @@ describe('queryOrganizationUsage', () => {
       makeRecord({ username: 'hubot', organization: 'octo', quantity: 1, gross_amount: 0.04, discount_amount: 0.01, net_amount: 0.03 }),
     ])
     const conn = await getDb()
-    const result = await queryOrganizationUsage(conn)
+    const result = await queryOrganizations(conn)
 
     const octo = result.organizations.find((o) => o.organization === 'octo')
     expect(octo).toBeDefined()
@@ -115,7 +115,7 @@ describe('queryOrganizationUsage', () => {
       makeRecord({ organization: 'Mozilla' }),
     ])
     const conn = await getDb()
-    const result = await queryOrganizationUsage(conn)
+    const result = await queryOrganizations(conn)
 
     const names = result.organizations.map((o) => o.organization)
     expect(names).toEqual(['Alpha', 'Mozilla', 'Zebra'])
@@ -124,7 +124,7 @@ describe('queryOrganizationUsage', () => {
   it('does not have a netCostPerUser field on OrganizationUsage', async () => {
     await seedTable([makeRecord({ organization: 'octo' })])
     const conn = await getDb()
-    const result = await queryOrganizationUsage(conn)
+    const result = await queryOrganizations(conn)
 
     expect(result.organizations).toHaveLength(1)
     expect('netCostPerUser' in result.organizations[0]).toBe(false)

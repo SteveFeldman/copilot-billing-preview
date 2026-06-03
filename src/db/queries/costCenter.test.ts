@@ -1,7 +1,7 @@
 import { describe, it, expect, afterEach } from 'vitest'
 import { getDb, resetDb } from '../duckdb'
 import { createUsageTable, appendRow } from '../appender'
-import { queryCostCenterUsage } from './costCenter'
+import { queryCostCenters } from './costCenter'
 import type { TokenUsageRecord } from '../../pipeline/parser'
 
 function makeRecord(overrides: Partial<TokenUsageRecord> = {}): TokenUsageRecord {
@@ -28,7 +28,7 @@ async function seedTable(records: TokenUsageRecord[]) {
   return conn
 }
 
-describe('queryCostCenterUsage', () => {
+describe('queryCostCenters', () => {
   afterEach(async () => { await resetDb() })
 
   it('groups by cost_center_name and counts distinct users', async () => {
@@ -39,7 +39,7 @@ describe('queryCostCenterUsage', () => {
       makeRecord({ username: 'octocat', cost_center_name: 'Ops', gross_amount: 0.08, discount_amount: 0.02, net_amount: 0.06 }),
     ])
     const conn = await getDb()
-    const result = await queryCostCenterUsage(conn)
+    const result = await queryCostCenters(conn)
 
     expect(result.costCenters).toHaveLength(2)
     const eng = result.costCenters.find((c) => c.costCenterName === 'Eng')
@@ -57,7 +57,7 @@ describe('queryCostCenterUsage', () => {
       makeRecord({ username: 'hubot', cost_center_name: 'Eng', net_amount: 0.03, quantity: 1, gross_amount: 0.04, discount_amount: 0.01 }),
     ])
     const conn = await getDb()
-    const result = await queryCostCenterUsage(conn)
+    const result = await queryCostCenters(conn)
 
     const eng = result.costCenters.find((c) => c.costCenterName === 'Eng')
     expect(eng).toBeDefined()
@@ -71,7 +71,7 @@ describe('queryCostCenterUsage', () => {
       makeRecord({ username: 'solo', cost_center_name: 'Solo', quantity: 5, gross_amount: 0.20, discount_amount: 0.05, net_amount: 0.15 }),
     ])
     const conn = await getDb()
-    const result = await queryCostCenterUsage(conn)
+    const result = await queryCostCenters(conn)
 
     const solo = result.costCenters.find((c) => c.costCenterName === 'Solo')
     expect(solo).toBeDefined()
@@ -85,7 +85,7 @@ describe('queryCostCenterUsage', () => {
       makeRecord({ username: 'mona', cost_center_name: 'Eng', model: 'Claude 3.5', quantity: 1, gross_amount: 0.04, discount_amount: 0.01, net_amount: 0.03 }),
     ])
     const conn = await getDb()
-    const result = await queryCostCenterUsage(conn)
+    const result = await queryCostCenters(conn)
 
     const eng = result.costCenters.find((c) => c.costCenterName === 'Eng')
     expect(eng).toBeDefined()
@@ -103,7 +103,7 @@ describe('queryCostCenterUsage', () => {
       makeRecord({ username: 'hubot', cost_center_name: 'Eng', quantity: 1, gross_amount: 0.04, discount_amount: 0.01, net_amount: 0.03 }),
     ])
     const conn = await getDb()
-    const result = await queryCostCenterUsage(conn)
+    const result = await queryCostCenters(conn)
 
     const eng = result.costCenters.find((c) => c.costCenterName === 'Eng')
     expect(eng).toBeDefined()
@@ -124,7 +124,7 @@ describe('queryCostCenterUsage', () => {
       makeRecord({ username: 'ghost', cost_center_name: null }),
     ])
     const conn = await getDb()
-    const result = await queryCostCenterUsage(conn)
+    const result = await queryCostCenters(conn)
 
     expect(result.costCenters).toHaveLength(1)
     expect(result.costCenters[0].costCenterName).toBe('Eng')
@@ -137,7 +137,7 @@ describe('queryCostCenterUsage', () => {
       makeRecord({ cost_center_name: 'Marketing' }),
     ])
     const conn = await getDb()
-    const result = await queryCostCenterUsage(conn)
+    const result = await queryCostCenters(conn)
 
     const names = result.costCenters.map((c) => c.costCenterName)
     expect(names).toEqual(['Alpha', 'Marketing', 'Zebra'])
@@ -149,7 +149,7 @@ describe('queryCostCenterUsage', () => {
       makeRecord({ cost_center_name: 'Eng', quantity: 3, gross_amount: 0.12, discount_amount: 0.03, net_amount: 0.09, aic_quantity: 3, aic_gross_amount: 0.03, aic_net_amount: 0.03 }),
     ])
     const conn = await getDb()
-    const result = await queryCostCenterUsage(conn)
+    const result = await queryCostCenters(conn)
 
     const eng = result.costCenters.find((c) => c.costCenterName === 'Eng')
     expect(eng!.totals.requests).toBeCloseTo(5)
