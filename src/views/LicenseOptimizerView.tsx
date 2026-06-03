@@ -66,6 +66,46 @@ export function LicenseOptimizerView({ totalAicUnits, currentBusinessSeats, curr
   const displayCell = selectedCell ?? fixedTotalScenario ?? optimalScenario
   const businessCols = Array.from({ length: bMax - bMin + 1 }, (_, i) => bMin + i)
 
+  function exportCsv(): void {
+    const headers = ['Scenario', 'Business Seats', 'Enterprise Seats', 'License $/mo', 'AIC Pool (units)', 'AIC Overage $/mo', 'Total $/mo', 'Total $/yr']
+
+    function scenarioRow(label: string, s: LicenseScenario): string[] {
+      return [
+        label,
+        String(s.businessSeats),
+        String(s.enterpriseSeats),
+        s.licenseCostUsd.toFixed(2),
+        String(s.poolSizeUnits),
+        s.aicOverageUsd.toFixed(2),
+        s.totalCostUsd.toFixed(2),
+        (s.totalCostUsd * 12).toFixed(2),
+      ]
+    }
+
+    const rows: string[][] = [
+      headers,
+      scenarioRow('Current config', currentScenario),
+      scenarioRow('Recommended mix', optimalScenario),
+    ]
+
+    if (fixedTotalScenario) {
+      rows.push(scenarioRow(`Fixed total (${fixedTotal} seats)`, fixedTotalScenario))
+    }
+
+    if (selectedCell) {
+      rows.push(scenarioRow('Selected cell', selectedCell))
+    }
+
+    const csv = rows.map((row) => row.map((cell) => `"${cell.replace(/"/g, '""')}"`).join(',')).join('\n')
+    const blob = new Blob([csv], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'license-optimizer.csv'
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
   return (
     <div className="p-6 space-y-6">
       <div>
@@ -208,21 +248,30 @@ export function LicenseOptimizerView({ totalAicUnits, currentBusinessSeats, curr
 
       {/* Cost grid */}
       <div>
-        <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-2 justify-between mb-2">
           <h2 className="text-sm font-semibold text-gray-700">
             Cost grid ({showAnnual ? 'annual' : 'monthly'}) — click any cell to inspect. Green = cheaper than current, red = more expensive.
           </h2>
-          <label className="flex items-center gap-1.5 text-xs text-gray-500">
-            Range ±
-            <select
-              value={halfRange}
-              onChange={(e) => { setSelectedCell(null); setHalfRange(Number(e.target.value)) }}
-              className="border border-gray-300 rounded px-1 py-0.5 text-xs bg-white"
+          <div className="flex items-center gap-2">
+            <label className="flex items-center gap-1.5 text-xs text-gray-500">
+              Range ±
+              <select
+                value={halfRange}
+                onChange={(e) => { setSelectedCell(null); setHalfRange(Number(e.target.value)) }}
+                className="border border-gray-300 rounded px-1 py-0.5 text-xs bg-white"
+              >
+                {RANGE_OPTIONS.map((r) => <option key={r} value={r}>{r}</option>)}
+              </select>
+              seats
+            </label>
+            <button
+              type="button"
+              onClick={exportCsv}
+              className="border border-gray-300 rounded px-2 py-0.5 text-xs bg-white hover:bg-gray-50 transition-colors"
             >
-              {RANGE_OPTIONS.map((r) => <option key={r} value={r}>{r}</option>)}
-            </select>
-            seats
-          </label>
+              Export CSV
+            </button>
+          </div>
         </div>
         <div className="overflow-auto border border-gray-200 rounded-lg">
           <table className="text-xs border-collapse min-w-max">
