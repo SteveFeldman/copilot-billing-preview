@@ -24,7 +24,10 @@ const PRODUCT_METRICS_SELECT = `
     WHEN unit_type = 'requests' THEN aic_quantity
     ELSE CASE WHEN has_aic_quantity THEN aic_quantity ELSE quantity END
   END)                                                                            AS aicQuantity,
-  SUM(aic_net_amount)                                                             AS aicGrossAmount,
+  SUM(CASE
+    WHEN unit_type = 'requests' THEN aic_gross_amount
+    ELSE CASE WHEN has_aic_gross_amount THEN aic_gross_amount ELSE gross_amount END
+  END)                                                                            AS aicGrossAmount,
   SUM(aic_net_amount)                                                             AS aicNetAmount
 `.trim()
 
