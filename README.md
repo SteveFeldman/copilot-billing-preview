@@ -12,6 +12,51 @@ This project is in active development. It is intended to help GitHub Copilot cus
 - Compare request-based and usage-based billing signals
 - Explore usage and cost trends by user, organization, model, product, and cost center
 - Review AI Credit usage, included credits, and cost management views
+- **License Optimizer** — find the lowest-cost Business/Enterprise seat mix based on actual AIC usage
+
+## What's new in this branch (`feature/duckdb-wasm-integration`)
+
+### DuckDB-WASM query engine
+
+The data pipeline has been rewritten to use [DuckDB-WASM](https://duckdb.org/docs/api/wasm/overview.html) as an in-browser analytical query engine. CSV rows are streamed, normalized, and loaded into a DuckDB table, then all aggregations run as parallel SQL queries instead of hand-rolled JavaScript reducers.
+
+**Why this matters:**
+- Faster processing for large reports — SQL runs close to the data, in a single pass
+- Simpler, more maintainable aggregation logic
+- Identical behavior in browser (WASM workers) and Node.js/Vitest (worker adapter)
+
+**Technical details:**
+- `src/db/duckdb.ts` — DuckDB singleton; selects WASM bundle in browser, uses a Node worker adapter in test environments
+- `src/db/appender.ts` — columnar row buffer that flushes via Apache Arrow IPC stream (the only reliable insertion path in DuckDB-WASM)
+- `src/db/schema.ts` — canonical `usage` table DDL
+- `src/pipeline/runPipelineDuckDB.ts` — full pipeline: stream CSV → normalize → AIC-allocate → append to DuckDB → run 8 parallel SQL queries → return structured results
+
+### License Optimizer
+
+A new page (`License Optimizer` in the sidebar, available for organization reports) helps you find the cheapest combination of Business and Enterprise seats given your actual AIC usage from the uploaded report.
+
+**Features:**
+
+| Feature | Description |
+|---------|-------------|
+| Optimal mix recommendation | Finds the Business/Enterprise split that minimizes monthly spend (license fees + AIC overage) subject to your minimum seat constraint |
+| Cost grid | Interactive table of costs across ±10/25/50/100 seats around the optimal — click any cell to inspect it |
+| Current config comparison | Side-by-side breakdown of current config vs recommended (or selected) mix with savings/premium delta |
+| Fixed total seats mode | Checkbox to constrain the search to exactly N total seats — finds the best B/E split for that total |
+| Annual projection | Toggle to view all costs as monthly or annual (×12) figures |
+| Break-even guide | Explains the AIC unit thresholds at which each seat type pays off vs pure overage pricing |
+| Zero-AIC user insight | Flags users with no AIC usage in the report period — they only need a base Business seat |
+| CSV export | Downloads a summary of current config, recommended mix, fixed-total optimal, and selected cell |
+
+**Seat constraint fix:** The optimizer respects your configured seat total (from the seat override UI) as the minimum floor, not just the number of active users in the report. This prevents scenarios where the optimizer recommends fewer seats than you actually have contracted.
+
+**Pricing model used:**
+- Business: $19/month, 3,000 AIC units included
+- Enterprise: $39/month, 7,000 AIC units included
+- AIC overage: $0.01/unit
+- Business break-even: 1,900 AIC units/month
+- Enterprise break-even: 3,900 AIC units/month
+- Enterprise preferred over Business when marginal usage exceeds 2,000 additional units/month
 
 ## Scope and limitations
 
