@@ -15,6 +15,7 @@ import { FaqView } from './views/FaqView'
 import { ProductsView } from './views/ProductsView'
 import { OverviewView } from './views/OverviewView'
 import { CostManagementView } from './views/CostManagementView'
+import { LicenseOptimizerView } from './views/LicenseOptimizerView'
 import { SpendInsightsView } from './views/SpendInsightsView'
 import { appLinks } from './config/links'
 import type { QuickStatsResult } from './pipeline/aggregators/quickStatsAggregator'
@@ -41,7 +42,7 @@ import { normalizeSeatCount } from './utils/seatCounts'
 import { useAppVersionCheck } from './hooks/useAppVersionCheck'
 
 type Status = 'idle' | 'processing' | 'done'
-type ActiveView = 'overview' | 'users' | 'userDetails' | 'costCenters' | 'orgs' | 'models' | 'products' | 'spendInsights' | 'costManagement' | 'guide' | 'faq'
+type ActiveView = 'overview' | 'users' | 'userDetails' | 'costCenters' | 'orgs' | 'models' | 'products' | 'spendInsights' | 'costManagement' | 'licenseOptimizer' | 'guide' | 'faq'
 
 const BUSINESS_LICENSE_MONTHLY_COST = 19
 const ENTERPRISE_LICENSE_MONTHLY_COST = 39
@@ -677,6 +678,18 @@ function App() {
                   <span className="whitespace-nowrap overflow-hidden text-ellipsis max-sm:sr-only">Cost Management</span>
                 </button>
 
+                {!isIndividualReport && (
+                  <button
+                    type="button"
+                    className={`${sidebarItemBase} ${visibleActiveView === 'licenseOptimizer' ? sidebarActive : sidebarInactive}`}
+                    onClick={() => setActiveView('licenseOptimizer')}
+                    aria-current={visibleActiveView === 'licenseOptimizer' ? 'page' : undefined}
+                  >
+                    <DatabaseIcon size={18} className="shrink-0" aria-hidden />
+                    <span className="whitespace-nowrap overflow-hidden text-ellipsis max-sm:sr-only">License Optimizer</span>
+                  </button>
+                )}
+
                 <hr className="border-0 border-t border-border-default my-[6px]" />
 
                 <button
@@ -793,6 +806,15 @@ function App() {
                     onApplyBudgetSimulation={handleApplyBudgetSimulation}
                   />
                 </div>
+             ) : visibleActiveView === 'licenseOptimizer' && !isIndividualReport ? (
+               <div className={viewContentClasses}>
+                 <LicenseOptimizerView
+                   totalAicUnits={overviewTotals.aicQuantity}
+                   currentBusinessSeats={effectiveBusinessSeats}
+                   currentEnterpriseSeats={effectiveEnterpriseSeats}
+                   userCount={quickStats?.userCount ?? reportUsers.length}
+                 />
+               </div>
              ) : visibleActiveView === 'guide' ? (
                <div className={viewContentClasses}>
                  <ReportGuideView />
