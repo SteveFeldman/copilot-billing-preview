@@ -3,6 +3,8 @@ import {
   calculateScenarioCost,
   findOptimalMix,
   buildCostGrid,
+  findOptimalSplitForFixedTotal,
+  calculateBreakEven,
 } from './licenseOptimization'
 
 // 1000 business users, each using 4 AIC units/month = 4000 total AIC units
@@ -93,5 +95,50 @@ describe('buildCostGrid', () => {
     expect(minCells.length).toBeGreaterThanOrEqual(1)
     const minCost = Math.min(...grid.flat().map((c) => c.totalCostUsd))
     expect(minCells[0].totalCostUsd).toBeCloseTo(minCost)
+  })
+})
+
+describe('findOptimalSplitForFixedTotal', () => {
+  it('finds the cheapest B/E split for exactly N seats', () => {
+    // 4000 AIC units, 10 seats total
+    // All-business: 10B+0E = pool 30000, no overage, cost = 10*$19 = $190
+    // 1E+9B: pool 7000+27000=34000, no overage, cost = $39+9*$19 = $210
+    // → all-business wins
+    const result = findOptimalSplitForFixedTotal({ totalAicUnits: Q, totalSeats: 10 })
+    expect(result.businessSeats + result.enterpriseSeats).toBe(10)
+    expect(result.isOptimal).toBe(true)
+    expect(result.totalCostUsd).toBeLessThanOrEqual(190)
+  })
+
+  it('returns correct zero-seat edge case', () => {
+    const result = findOptimalSplitForFixedTotal({ totalAicUnits: Q, totalSeats: 0 })
+    expect(result.businessSeats).toBe(0)
+    expect(result.enterpriseSeats).toBe(0)
+    expect(result.aicOverageUsd).toBeCloseTo(40) // 4000 * $0.01
+  })
+
+  it('always returns a scenario where B+E equals totalSeats', () => {
+    const result = findOptimalSplitForFixedTotal({ totalAicUnits: Q, totalSeats: 5 })
+    expect(result.businessSeats + result.enterpriseSeats).toBe(5)
+  })
+})
+
+describe('calculateBreakEven', () => {
+  it('returns correct business break-even units', () => {
+    const be = calculateBreakEven()
+    // $19 / $0.01 = 1900 AIC units
+    expect(be.businessBreakEvenUnits).toBe(1900)
+  })
+
+  it('returns correct enterprise break-even units', () => {
+    const be = calculateBreakEven()
+    // $39 / $0.01 = 3900 AIC units
+    expect(be.enterpriseBreakEvenUnits).toBe(3900)
+  })
+
+  it('returns correct enterprise-vs-business marginal break-even', () => {
+    const be = calculateBreakEven()
+    // ($39 - $19) / $0.01 = 2000 additional AIC units to prefer Enterprise over Business
+    expect(be.enterpriseVsBusinessBreakEvenUnits).toBe(2000)
   })
 })

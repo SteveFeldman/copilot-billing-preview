@@ -129,3 +129,39 @@ export function buildCostGrid({ totalAicUnits, businessRange, enterpriseRange }:
 
   return grid
 }
+
+export type FixedTotalSplitInput = {
+  totalAicUnits: number
+  totalSeats: number
+}
+
+export function findOptimalSplitForFixedTotal({ totalAicUnits, totalSeats }: FixedTotalSplitInput): LicenseScenario {
+  if (totalSeats === 0) {
+    return { ...calculateScenarioCost({ businessSeats: 0, enterpriseSeats: 0, totalAicUnits }), isOptimal: true }
+  }
+
+  let best: LicenseScenario | null = null
+  for (let e = 0; e <= totalSeats; e++) {
+    const b = totalSeats - e
+    const scenario = calculateScenarioCost({ businessSeats: b, enterpriseSeats: e, totalAicUnits })
+    if (!best || scenario.totalCostUsd < best.totalCostUsd) {
+      best = scenario
+    }
+  }
+
+  return { ...best!, isOptimal: true }
+}
+
+export type BreakEven = {
+  businessBreakEvenUnits: number
+  enterpriseBreakEvenUnits: number
+  enterpriseVsBusinessBreakEvenUnits: number
+}
+
+export function calculateBreakEven(): BreakEven {
+  return {
+    businessBreakEvenUnits: BUSINESS_LICENSE_MONTHLY_COST / AIC_UNIT_PRICE_USD,
+    enterpriseBreakEvenUnits: ENTERPRISE_LICENSE_MONTHLY_COST / AIC_UNIT_PRICE_USD,
+    enterpriseVsBusinessBreakEvenUnits: (ENTERPRISE_LICENSE_MONTHLY_COST - BUSINESS_LICENSE_MONTHLY_COST) / AIC_UNIT_PRICE_USD,
+  }
+}
