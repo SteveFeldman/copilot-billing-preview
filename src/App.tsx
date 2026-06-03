@@ -813,6 +813,7 @@ function App() {
                    currentBusinessSeats={effectiveBusinessSeats}
                    currentEnterpriseSeats={effectiveEnterpriseSeats}
                    userCount={quickStats?.userCount ?? reportUsers.length}
+                   zeroAicUserCount={reportUsers.filter((u) => u.totals.aicQuantity === 0).length}
                  />
                </div>
              ) : visibleActiveView === 'guide' ? (

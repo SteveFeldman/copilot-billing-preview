@@ -7,17 +7,20 @@ type Props = {
   currentBusinessSeats: number
   currentEnterpriseSeats: number
   userCount: number
+  zeroAicUserCount: number
 }
 
 const RANGE_OPTIONS = [10, 25, 50, 100] as const
 
-export function LicenseOptimizerView({ totalAicUnits, currentBusinessSeats, currentEnterpriseSeats, userCount }: Props) {
+export function LicenseOptimizerView({ totalAicUnits, currentBusinessSeats, currentEnterpriseSeats, userCount, zeroAicUserCount }: Props) {
   const [selectedCell, setSelectedCell] = useState<LicenseScenario | null>(null)
   const [halfRange, setHalfRange] = useState(10)
 
+  const minTotalSeats = Math.max(userCount, currentBusinessSeats + currentEnterpriseSeats)
+
   const optimal = useMemo(
-    () => findOptimalMix({ totalAicUnits, minTotalSeats: userCount }),
-    [totalAicUnits, userCount],
+    () => findOptimalMix({ totalAicUnits, minTotalSeats }),
+    [totalAicUnits, minTotalSeats],
   )
 
   // Grid is centered on the optimal mix so the most interesting area is always visible.
@@ -70,9 +73,22 @@ export function LicenseOptimizerView({ totalAicUnits, currentBusinessSeats, curr
           )}
         </p>
         <p className="text-xs text-green-600 mt-1">
-          Minimum {userCount} seats required to cover all {userCount.toLocaleString()} users.
+          Minimum {minTotalSeats} seats required ({userCount.toLocaleString()} active users
+          {minTotalSeats > userCount ? `, ${currentBusinessSeats + currentEnterpriseSeats} configured` : ''}).
         </p>
       </div>
+
+      {zeroAicUserCount > 0 && (
+        <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
+          <p className="text-sm font-semibold text-blue-900">
+            {zeroAicUserCount} of {userCount} user{userCount !== 1 ? 's' : ''} had zero AIC usage this period
+          </p>
+          <p className="text-sm text-blue-700 mt-1">
+            These users don't consume AIC credits — a Business seat ($19/month) is the lowest-cost option for them.
+            Consider whether they need Copilot at all.
+          </p>
+        </div>
+      )}
 
       {/* Side-by-side breakdown: current config vs selected/recommended */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
