@@ -121,6 +121,16 @@ describe('findOptimalSplitForFixedTotal', () => {
     const result = findOptimalSplitForFixedTotal({ totalAicUnits: Q, totalSeats: 5 })
     expect(result.businessSeats + result.enterpriseSeats).toBe(5)
   })
+
+  it('prefers Enterprise when AIC usage is high relative to the single seat', () => {
+    // totalSeats=1, totalAicUnits=8000
+    // 1B: $19 + (8000-3000)*$0.01 = $19 + $50 = $69
+    // 1E: $39 + (8000-7000)*$0.01 = $39 + $10 = $49  ← cheaper
+    const result = findOptimalSplitForFixedTotal({ totalAicUnits: 8000, totalSeats: 1 })
+    expect(result.enterpriseSeats).toBe(1)
+    expect(result.businessSeats).toBe(0)
+    expect(result.totalCostUsd).toBeCloseTo(49)
+  })
 })
 
 describe('calculateBreakEven', () => {

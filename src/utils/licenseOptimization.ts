@@ -136,7 +136,7 @@ export type FixedTotalSplitInput = {
 }
 
 export function findOptimalSplitForFixedTotal({ totalAicUnits, totalSeats }: FixedTotalSplitInput): LicenseScenario {
-  if (totalSeats === 0) {
+  if (totalSeats <= 0) {
     return { ...calculateScenarioCost({ businessSeats: 0, enterpriseSeats: 0, totalAicUnits }), isOptimal: true }
   }
 
